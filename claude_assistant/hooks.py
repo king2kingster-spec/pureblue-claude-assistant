@@ -1,0 +1,12 @@
+app_name = "claude_assistant"
+app_title = "Claude AI Assistant"
+app_publisher = "PureBlue"
+app_description = "Claude AI Assistant sidebar for ERPNext"
+app_email = "ahad@pureblue.co.in"
+app_license = "MIT"
+app_version = "1.0.0"
+app_color = "orange"
+app_icon = "octicon octicon-file-directory"
+
+app_include_js = "/assets/claude_assistant/js/claude_sidebar.js"
+app_include_css = "/assets/claude_assistant/css/claude_sidebar.css"
