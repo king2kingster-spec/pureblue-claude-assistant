@@ -23,7 +23,6 @@
   }
 
   function buildSidebar() {
-    // Toggle button
     var btn = document.createElement('button');
     btn.id = 'claude-toggle-btn';
     btn.title = 'Claude AI Assistant';
@@ -31,7 +30,6 @@
     btn.onclick = toggleSidebar;
     document.body.appendChild(btn);
 
-    // Sidebar container
     var sidebar = document.createElement('div');
     sidebar.id = 'claude-sidebar';
     sidebar.innerHTML =
@@ -52,21 +50,18 @@
     checkSetup();
   }
 
-  function checkSetup() {
-    $.ajax({
-      url: '/api/method/claude_assistant.api.get_settings',
-      type: 'GET',
-      headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
-      success: function(r) {
-        if (r && r.message && r.message.has_key) {
-          hasApiKey = true;
-          renderChat();
-        } else {
-          renderSetup();
-        }
-      },
-      error: function() { renderSetup(); }
-    });
+  function updateContext() {
+    var doc = getCurrentDoc();
+    var ctx = document.getElementById('cs-context');
+    var txt = document.getElementById('cs-context-text');
+    if (ctx && txt) {
+      if (doc.doctype && doc.docname) {
+        ctx.style.display = 'flex';
+        txt.textContent = doc.doctype + ': ' + doc.docname;
+      } else {
+        ctx.style.display = 'none';
+      }
+    }
   }
 
   function renderSetup() {
@@ -122,7 +117,8 @@
     if (inp) inp.disabled = val;
   }
 
-function checkSetup() {
+  function checkSetup() {
+    // Use raw AJAX to avoid Frappe showing error popups
     $.ajax({
       url: '/api/method/claude_assistant.api.get_settings',
       type: 'GET',
@@ -135,7 +131,9 @@ function checkSetup() {
           renderSetup();
         }
       },
-      error: function() { renderSetup(); }
+      error: function() {
+        renderSetup();
+      }
     });
   }
 
@@ -160,15 +158,18 @@ function checkSetup() {
     saveKey: function () {
       var inp = document.getElementById('cs-key-input');
       if (!inp || !inp.value.trim()) { frappe.msgprint('Please enter your API key.'); return; }
-      frappe.call({
-        method: 'claude_assistant.api.save_api_key',
-        args: { api_key: inp.value.trim() },
-        callback: function (r) {
-          if (!r.exc) {
-            hasApiKey = true;
-            renderChat();
-            frappe.show_alert({ message: 'Claude AI connected!', indicator: 'green' });
-          }
+      $.ajax({
+        url: '/api/method/claude_assistant.api.save_api_key',
+        type: 'POST',
+        data: { api_key: inp.value.trim() },
+        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
+        success: function(r) {
+          hasApiKey = true;
+          renderChat();
+          frappe.show_alert({ message: 'Claude AI connected!', indicator: 'green' });
+        },
+        error: function() {
+          frappe.msgprint('Failed to save API key. Please try again.');
         }
       });
     },
@@ -184,22 +185,33 @@ function checkSetup() {
       var thinking = addMsg('thinking', '⏳ Thinking...');
       setLoading(true);
       var doc = getCurrentDoc();
-      frappe.call({
-        method: 'claude_assistant.api.ask_claude',
-        args: { question: q, current_doctype: doc.doctype, current_docname: doc.docname },
-        callback: function (r) {
+      $.ajax({
+        url: '/api/method/claude_assistant.api.ask_claude',
+        type: 'POST',
+        data: {
+          question: q,
+          current_doctype: doc.doctype || '',
+          current_docname: doc.docname || ''
+        },
+        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
+        success: function(r) {
           setLoading(false);
           if (thinking) thinking.remove();
-          if (r.exc) {
-            addMsg('error', '❌ ' + (r.exc || 'Something went wrong'));
-          } else {
+          if (r && r.message) {
             addMsg('assistant', r.message);
+          } else {
+            addMsg('error', '❌ No response received.');
           }
         },
-        error: function () {
+        error: function(xhr) {
           setLoading(false);
           if (thinking) thinking.remove();
-          addMsg('error', '❌ Connection error. Please try again.');
+          var msg = '❌ Error. Please try again.';
+          try {
+            var resp = JSON.parse(xhr.responseText);
+            if (resp.exc) msg = '❌ ' + resp.exc.split('\n').pop();
+          } catch(e) {}
+          addMsg('error', msg);
         }
       });
     },
@@ -212,7 +224,6 @@ function checkSetup() {
     }
   };
 
-  // Boot after Frappe is ready - only for System Manager
   $(document).ready(function () {
     setTimeout(function () {
       if (!isSystemManager()) return;
