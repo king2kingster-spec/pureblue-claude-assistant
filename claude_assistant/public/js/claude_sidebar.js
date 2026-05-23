@@ -222,11 +222,22 @@
     });
   }
 
+  function hasAccess() {
+    try {
+      return frappe.user_roles && (
+        frappe.user_roles.includes('System Manager') ||
+        frappe.user_roles.includes('Administrator')
+      );
+    } catch(e) { return false; }
+  }
+
   // Init after Frappe loads
   $(document).ready(function () {
-    setTimeout(buildSidebar, 1500);
+    setTimeout(function() {
+      if (!hasAccess()) return;
+      buildSidebar();
+    }, 1500);
 
-    // Update context bar when navigating to a new doc
     $(document).on('page-change', function () {
       setTimeout(updateContextBar, 500);
     });
