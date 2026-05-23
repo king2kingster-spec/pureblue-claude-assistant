@@ -1,2 +1,0 @@
-include requirements.txt
-recursive-include claude_assistant *.json *.js *.css *.html *.py *.txt
