@@ -52,18 +52,21 @@
     checkSetup();
   }
 
-  function updateContext() {
-    var doc = getCurrentDoc();
-    var ctx = document.getElementById('cs-context');
-    var txt = document.getElementById('cs-context-text');
-    if (ctx && txt) {
-      if (doc.doctype && doc.docname) {
-        ctx.style.display = 'flex';
-        txt.textContent = doc.doctype + ': ' + doc.docname;
-      } else {
-        ctx.style.display = 'none';
-      }
-    }
+  function checkSetup() {
+    $.ajax({
+      url: '/api/method/claude_assistant.api.get_settings',
+      type: 'GET',
+      headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
+      success: function(r) {
+        if (r && r.message && r.message.has_key) {
+          hasApiKey = true;
+          renderChat();
+        } else {
+          renderSetup();
+        }
+      },
+      error: function() { renderSetup(); }
+    });
   }
 
   function renderSetup() {
@@ -119,18 +122,20 @@
     if (inp) inp.disabled = val;
   }
 
-  function checkSetup() {
-    frappe.call({
-      method: 'claude_assistant.api.get_settings',
-      callback: function (r) {
-        if (r.message && r.message.has_key) {
+function checkSetup() {
+    $.ajax({
+      url: '/api/method/claude_assistant.api.get_settings',
+      type: 'GET',
+      headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
+      success: function(r) {
+        if (r && r.message && r.message.has_key) {
           hasApiKey = true;
           renderChat();
         } else {
           renderSetup();
         }
       },
-      error: function () { renderSetup(); }
+      error: function() { renderSetup(); }
     });
   }
 
