@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="claude_assistant",
-    version="1.0.0",
+    version="1.0.1",
     description="Claude AI Assistant for ERPNext - PureBlue",
     author="PureBlue",
     author_email="ahad@pureblue.co.in",
