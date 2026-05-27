@@ -1,20 +1,4 @@
 /* Claude AI Assistant Sidebar - PureBlue ERPNext */
-#claude-sidebar {
-  position: fixed;
-  top: 0;
-  right: -420px;
-  width: 400px;
-  height: 100vh;
-  background: #fff;
-  box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  border-left: 1px solid #e5e7eb;
-}
-#claude-sidebar.open { right: 0; }
 
 #claude-toggle-btn {
   position: fixed;
@@ -39,7 +23,29 @@
 }
 #claude-toggle-btn:hover { background: #b55538; }
 #claude-toggle-btn .btn-icon { font-size: 16px; }
-#claude-toggle-btn .btn-text { font-size: 8px; font-weight: 700; letter-spacing: 0.1em; writing-mode: vertical-rl; }
+#claude-toggle-btn .btn-text {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  writing-mode: vertical-rl;
+}
+
+#claude-sidebar {
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 400px;
+  height: 100vh;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border-left: 1px solid #e5e7eb;
+}
+#claude-sidebar.open { right: 0; }
 
 .cs-header {
   background: linear-gradient(135deg, #c96442, #a8502f);
@@ -58,8 +64,8 @@
   border: none; color: white;
   width: 28px; height: 28px;
   border-radius: 6px; cursor: pointer;
-  font-size: 14px; display: flex;
-  align-items: center; justify-content: center;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
 }
 .cs-icon-btn:hover { background: rgba(255,255,255,0.25); }
 
@@ -73,9 +79,10 @@
 .cs-context-dot {
   width: 6px; height: 6px;
   background: #c96442; border-radius: 50%;
-  animation: pulse 2s infinite;
+  animation: cspulse 2s infinite;
+  flex-shrink: 0;
 }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes cspulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .cs-chips {
   padding: 8px 12px;
@@ -128,6 +135,20 @@
   background: #fef2f2; color: #dc2626;
   border: 1px solid #fecaca;
   align-self: flex-start;
+  border-bottom-left-radius: 3px;
+}
+
+.cs-no-key {
+  padding: 24px 16px;
+  text-align: center;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.cs-no-key a {
+  color: #c96442;
+  text-decoration: none;
+  font-weight: 500;
 }
 
 .cs-input-area {
@@ -158,25 +179,6 @@
 }
 .cs-send:hover { background: #b55538; }
 .cs-send:disabled { background: #d1d5db; cursor: not-allowed; }
-
-.cs-setup {
-  padding: 20px 16px;
-  display: flex; flex-direction: column; gap: 12px;
-}
-.cs-setup p { font-size: 13px; color: #374151; line-height: 1.6; }
-.cs-setup input {
-  border: 1px solid #d1d5db; border-radius: 8px;
-  padding: 8px 12px; font-size: 13px; width: 100%; outline: none;
-  box-sizing: border-box;
-}
-.cs-setup input:focus { border-color: #c96442; }
-.cs-setup button {
-  background: #c96442; color: white; border: none;
-  border-radius: 8px; padding: 10px;
-  font-size: 13px; cursor: pointer; font-weight: 500;
-}
-.cs-setup button:hover { background: #b55538; }
-.cs-setup a { color: #c96442; font-size: 12px; }
 
 .cs-footer {
   font-size: 10px; color: #bbb;

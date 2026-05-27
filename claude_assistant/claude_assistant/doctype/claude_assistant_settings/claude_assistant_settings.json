@@ -3,13 +3,22 @@
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["api_key"],
+ "field_order": [
+  "api_key_section",
+  "api_key"
+ ],
  "fields": [
+  {
+   "fieldname": "api_key_section",
+   "fieldtype": "Section Break",
+   "label": "Claude API Configuration"
+  },
   {
    "fieldname": "api_key",
    "fieldtype": "Password",
    "label": "Claude API Key",
-   "reqd": 1
+   "reqd": 0,
+   "description": "Enter your Anthropic Claude API key. Get one at console.anthropic.com. Only System Manager can view or edit this."
   }
  ],
  "is_single": 1,
@@ -19,13 +28,18 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
    "read": 1,
+   "report": 0,
    "role": "System Manager",
+   "share": 0,
    "write": 1
   }
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "track_changes": 0
+ "track_changes": 1
 }

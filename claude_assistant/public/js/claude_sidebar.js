@@ -1,10 +1,13 @@
 /* Claude AI Assistant Sidebar - PureBlue ERPNext */
+/* Only visible to System Manager / Administrator */
+
 (function () {
   'use strict';
 
   var sidebarOpen = false;
-  var hasApiKey = false;
   var isLoading = false;
+
+  /* ── Helpers ── */
 
   function isSystemManager() {
     try {
@@ -22,80 +25,17 @@
     return { doctype: null, docname: null };
   }
 
-  function buildSidebar() {
-    var btn = document.createElement('button');
-    btn.id = 'claude-toggle-btn';
-    btn.title = 'Claude AI Assistant';
-    btn.innerHTML = '<span class="btn-icon">✦</span><span class="btn-text">AI</span>';
-    btn.onclick = toggleSidebar;
-    document.body.appendChild(btn);
-
-    var sidebar = document.createElement('div');
-    sidebar.id = 'claude-sidebar';
-    sidebar.innerHTML =
-      '<div class="cs-header">' +
-        '<div class="cs-header-info"><h3>✦ Claude AI</h3><p>PureBlue ERP Assistant</p></div>' +
-        '<div class="cs-header-actions">' +
-          '<button class="cs-icon-btn" onclick="claudeAI.clear()" title="Clear">↺</button>' +
-          '<button class="cs-icon-btn" onclick="claudeAI.close()" title="Close">✕</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="cs-context" id="cs-context" style="display:none;">' +
-        '<div class="cs-context-dot"></div>' +
-        '<span id="cs-context-text"></span>' +
-      '</div>' +
-      '<div id="cs-body"></div>';
-    document.body.appendChild(sidebar);
-
-    checkSetup();
-  }
-
   function updateContext() {
     var doc = getCurrentDoc();
     var ctx = document.getElementById('cs-context');
     var txt = document.getElementById('cs-context-text');
-    if (ctx && txt) {
-      if (doc.doctype && doc.docname) {
-        ctx.style.display = 'flex';
-        txt.textContent = doc.doctype + ': ' + doc.docname;
-      } else {
-        ctx.style.display = 'none';
-      }
+    if (!ctx || !txt) return;
+    if (doc.doctype && doc.docname) {
+      ctx.style.display = 'flex';
+      txt.textContent = doc.doctype + ': ' + doc.docname;
+    } else {
+      ctx.style.display = 'none';
     }
-  }
-
-  function renderSetup() {
-    var body = document.getElementById('cs-body');
-    if (!body) return;
-    body.innerHTML =
-      '<div class="cs-setup">' +
-        '<p><strong>Welcome to Claude AI for PureBlue ERP!</strong></p>' +
-        '<p>Enter your Anthropic API key to get started. Get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>' +
-        '<input type="password" id="cs-key-input" placeholder="sk-ant-api..." />' +
-        '<button onclick="claudeAI.saveKey()">Save API Key & Start</button>' +
-      '</div>';
-  }
-
-  function renderChat() {
-    var body = document.getElementById('cs-body');
-    if (!body) return;
-    body.innerHTML =
-      '<div class="cs-chips">' +
-        '<span class="cs-chip" onclick="claudeAI.quick(\'Summarize this document\')">📋 Summarize</span>' +
-        '<span class="cs-chip" onclick="claudeAI.quick(\'Draft a payment reminder email for this customer\')">✉️ Reminder email</span>' +
-        '<span class="cs-chip" onclick="claudeAI.quick(\'Show all outstanding receivables\')">💰 Receivables</span>' +
-        '<span class="cs-chip" onclick="claudeAI.quick(\'What is the current stock of DEF items?\')">📦 Stock</span>' +
-        '<span class="cs-chip" onclick="claudeAI.quick(\'Compare sales this month vs last month\')">📈 Sales trend</span>' +
-        '<span class="cs-chip" onclick="claudeAI.quick(\'Who are the top 5 customers by revenue?\')">⭐ Top customers</span>' +
-      '</div>' +
-      '<div class="cs-messages" id="cs-messages">' +
-        '<div class="cs-msg assistant">👋 Hello! I am your Claude AI assistant for PureBlue ERP.\n\nI can help you with:\n• Questions about customers, stock, invoices, orders\n• Analysing open documents\n• Drafting emails\n• Business insights\n\nTap a quick action or ask me anything!</div>' +
-      '</div>' +
-      '<div class="cs-input-area">' +
-        '<textarea class="cs-input" id="cs-input" placeholder="Ask about your ERP data..." rows="1" onkeydown="claudeAI.key(event)" oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,100)+\'px\'"></textarea>' +
-        '<button class="cs-send" id="cs-send" onclick="claudeAI.send()">➤</button>' +
-      '</div>' +
-      '<div class="cs-footer">Read-only · Powered by Claude · PureBlue</div>';
   }
 
   function addMsg(role, text) {
@@ -117,74 +57,143 @@
     if (inp) inp.disabled = val;
   }
 
-  function checkSetup() {
-    // Use raw AJAX to avoid Frappe showing error popups
+  /* ── Render: No API Key ── */
+
+  function renderNoKey() {
+    var body = document.getElementById('cs-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="cs-no-key">' +
+        '<p style="font-size:28px;margin-bottom:12px;">🔑</p>' +
+        '<p><strong>API Key Not Configured</strong></p>' +
+        '<p style="margin-top:8px;">Please go to <a href="/app/claude-assistant-settings" target="_blank">Claude Assistant Settings</a> and enter your Anthropic API key.</p>' +
+        '<p style="margin-top:8px;font-size:11px;color:#999;">Only System Manager can configure this.</p>' +
+      '</div>';
+  }
+
+  /* ── Render: Chat Interface ── */
+
+  function renderChat() {
+    var body = document.getElementById('cs-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="cs-chips">' +
+        '<span class="cs-chip" onclick="claudeAI.quick(\'Summarize this document\')">📋 Summarize</span>' +
+        '<span class="cs-chip" onclick="claudeAI.quick(\'Draft a payment reminder email for this customer\')">✉️ Reminder email</span>' +
+        '<span class="cs-chip" onclick="claudeAI.quick(\'Show all outstanding receivables\')">💰 Receivables</span>' +
+        '<span class="cs-chip" onclick="claudeAI.quick(\'What is the current stock of DEF items?\')">📦 Stock</span>' +
+        '<span class="cs-chip" onclick="claudeAI.quick(\'Compare sales this month vs last month\')">📈 Sales trend</span>' +
+        '<span class="cs-chip" onclick="claudeAI.quick(\'Who are the top 5 customers by revenue?\')">⭐ Top customers</span>' +
+      '</div>' +
+      '<div class="cs-messages" id="cs-messages">' +
+        '<div class="cs-msg assistant">' +
+          'Hello! I am your Claude AI assistant for PureBlue ERP.\n\n' +
+          'I can help you with:\n' +
+          '• Questions about customers, stock, invoices, orders\n' +
+          '• Analysing open documents\n' +
+          '• Drafting emails to customers or suppliers\n' +
+          '• Business insights and trends\n\n' +
+          'Tap a quick action above or ask me anything!' +
+        '</div>' +
+      '</div>' +
+      '<div class="cs-input-area">' +
+        '<textarea class="cs-input" id="cs-input" placeholder="Ask about your ERP data..." rows="1"' +
+          ' onkeydown="claudeAI.key(event)"' +
+          ' oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,100)+\'px\'">' +
+        '</textarea>' +
+        '<button class="cs-send" id="cs-send" onclick="claudeAI.send()">➤</button>' +
+      '</div>' +
+      '<div class="cs-footer">Read-only · Powered by Claude · PureBlue</div>';
+  }
+
+  /* ── Build Sidebar DOM ── */
+
+  function buildSidebar() {
+    // Toggle button
+    var btn = document.createElement('button');
+    btn.id = 'claude-toggle-btn';
+    btn.title = 'Claude AI Assistant';
+    btn.innerHTML = '<span class="btn-icon">✦</span><span class="btn-text">AI</span>';
+    btn.onclick = function () { claudeAI.toggle(); };
+    document.body.appendChild(btn);
+
+    // Sidebar
+    var sidebar = document.createElement('div');
+    sidebar.id = 'claude-sidebar';
+    sidebar.innerHTML =
+      '<div class="cs-header">' +
+        '<div class="cs-header-info">' +
+          '<h3>✦ Claude AI</h3>' +
+          '<p>PureBlue ERP Assistant</p>' +
+        '</div>' +
+        '<div class="cs-header-actions">' +
+          '<button class="cs-icon-btn" onclick="claudeAI.clear()" title="Clear chat">↺</button>' +
+          '<button class="cs-icon-btn" onclick="claudeAI.toggle()" title="Close">✕</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cs-context" id="cs-context" style="display:none;">' +
+        '<div class="cs-context-dot"></div>' +
+        '<span id="cs-context-text"></span>' +
+      '</div>' +
+      '<div id="cs-body"></div>';
+    document.body.appendChild(sidebar);
+
+    // Load initial state
+    loadState();
+  }
+
+  /* ── Check API Key Status ── */
+
+  function loadState() {
     $.ajax({
       url: '/api/method/claude_assistant.api.get_settings',
       type: 'GET',
       headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
-      success: function(r) {
+      success: function (r) {
         if (r && r.message && r.message.has_key) {
-          hasApiKey = true;
           renderChat();
         } else {
-          renderSetup();
+          renderNoKey();
         }
       },
-      error: function() {
-        renderSetup();
+      error: function () {
+        renderNoKey();
       }
     });
   }
 
-  function toggleSidebar() {
-    sidebarOpen = !sidebarOpen;
-    var s = document.getElementById('claude-sidebar');
-    if (s) {
-      s.classList.toggle('open', sidebarOpen);
-      if (sidebarOpen) updateContext();
-    }
-  }
+  /* ── Public API ── */
 
   window.claudeAI = {
-    close: function () {
-      sidebarOpen = false;
+
+    toggle: function () {
+      sidebarOpen = !sidebarOpen;
       var s = document.getElementById('claude-sidebar');
-      if (s) s.classList.remove('open');
+      if (s) {
+        s.classList.toggle('open', sidebarOpen);
+        if (sidebarOpen) updateContext();
+      }
     },
+
     clear: function () {
-      if (hasApiKey) renderChat();
+      loadState();
     },
-    saveKey: function () {
-      var inp = document.getElementById('cs-key-input');
-      if (!inp || !inp.value.trim()) { frappe.msgprint('Please enter your API key.'); return; }
-      $.ajax({
-        url: '/api/method/claude_assistant.api.save_api_key',
-        type: 'POST',
-        data: { api_key: inp.value.trim() },
-        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
-        success: function(r) {
-          hasApiKey = true;
-          renderChat();
-          frappe.show_alert({ message: 'Claude AI connected!', indicator: 'green' });
-        },
-        error: function() {
-          frappe.msgprint('Failed to save API key. Please try again.');
-        }
-      });
-    },
+
     send: function () {
       if (isLoading) return;
       var inp = document.getElementById('cs-input');
       if (!inp) return;
       var q = inp.value.trim();
       if (!q) return;
+
       inp.value = '';
       inp.style.height = 'auto';
       addMsg('user', q);
-      var thinking = addMsg('thinking', '⏳ Thinking...');
+      var thinking = addMsg('thinking', '⏳ Claude is thinking...');
       setLoading(true);
+
       var doc = getCurrentDoc();
+
       $.ajax({
         url: '/api/method/claude_assistant.api.ask_claude',
         type: 'POST',
@@ -194,35 +203,49 @@
           current_docname: doc.docname || ''
         },
         headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
-        success: function(r) {
+        success: function (r) {
           setLoading(false);
           if (thinking) thinking.remove();
           if (r && r.message) {
             addMsg('assistant', r.message);
           } else {
-            addMsg('error', '❌ No response received.');
+            addMsg('error', '❌ No response received. Please try again.');
           }
         },
-        error: function(xhr) {
+        error: function (xhr) {
           setLoading(false);
           if (thinking) thinking.remove();
           var msg = '❌ Error. Please try again.';
           try {
             var resp = JSON.parse(xhr.responseText);
-            if (resp.exc) msg = '❌ ' + resp.exc.split('\n').pop();
-          } catch(e) {}
+            if (resp._server_messages) {
+              var parsed = JSON.parse(resp._server_messages);
+              var inner = JSON.parse(parsed[0]);
+              msg = '❌ ' + (inner.message || msg);
+            }
+          } catch (e) {}
           addMsg('error', msg);
         }
       });
     },
+
     key: function (e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.send();
+      }
     },
+
     quick: function (q) {
       var inp = document.getElementById('cs-input');
-      if (inp) { inp.value = q; this.send(); }
+      if (inp) {
+        inp.value = q;
+        this.send();
+      }
     }
   };
+
+  /* ── Init ── */
 
   $(document).ready(function () {
     setTimeout(function () {
