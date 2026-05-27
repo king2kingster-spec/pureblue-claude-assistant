@@ -1,10 +1,10 @@
 import frappe
 from frappe.model.document import Document
+from claude_assistant.api import is_user_allowed
 
 
 class ClaudeAssistantSettings(Document):
 
 	def validate(self):
-		# Only Administrator can save
-		if "Administrator" not in frappe.get_roles():
-			frappe.throw("Only Administrator can modify Claude Assistant Settings.")
+		if not is_user_allowed():
+			frappe.throw("Only Administrator or System Manager can modify Claude Assistant Settings.")

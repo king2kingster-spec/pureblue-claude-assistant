@@ -2,12 +2,20 @@ import frappe
 import requests
 import json
 
+ALLOWED_ROLES = ["Administrator", "System Manager"]
+
+
+def is_user_allowed():
+	"""Check if user has allowed role."""
+	user_roles = frappe.get_roles()
+	return any(role in user_roles for role in ALLOWED_ROLES)
+
 
 @frappe.whitelist()
 def ask_claude(question, current_doctype=None, current_docname=None):
 	"""Main API - takes question, fetches ERP context, calls Claude, returns answer."""
 
-	if "Administrator" not in frappe.get_roles() and "System Manager" not in frappe.get_roles():
+	if not is_user_allowed():
 		frappe.throw("Not permitted. Only Administrator or System Manager can use Claude AI.")
 
 	# Get API key from Single DocType
@@ -187,7 +195,7 @@ def build_context(question, current_doctype, current_docname):
 def get_settings():
 	"""Check if API key is configured. Called on sidebar load."""
 	try:
-		if "Administrator" not in frappe.get_roles() and "System Manager" not in frappe.get_roles():
+		if not is_user_allowed():
 			return {"has_key": False, "permitted": False}
 		api_key = frappe.db.get_single_value("Claude Assistant Settings", "api_key")
 		return {"has_key": bool(api_key), "permitted": True}

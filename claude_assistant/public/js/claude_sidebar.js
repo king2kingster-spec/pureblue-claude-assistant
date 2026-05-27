@@ -12,7 +12,10 @@
   function isAdministrator() {
     try {
       var roles = frappe.user_roles || [];
-      return roles.indexOf('Administrator') !== -1 || roles.indexOf('System Manager') !== -1;
+      var allowedRoles = ['Administrator', 'System Manager'];
+      return roles.some(function(role) {
+        return allowedRoles.indexOf(role) !== -1;
+      });
     } catch (e) { return false; }
   }
 
@@ -67,7 +70,7 @@
         '<p style="font-size:28px;margin-bottom:12px;">🔑</p>' +
         '<p><strong>API Key Not Configured</strong></p>' +
         '<p style="margin-top:8px;">Please go to <a href="/app/claude-assistant-settings" target="_blank">Claude Assistant Settings</a> and enter your Anthropic API key.</p>' +
-        '<p style="margin-top:8px;font-size:11px;color:#999;">Only Administrator can configure this.</p>' +
+        '<p style="margin-top:8px;font-size:11px;color:#999;">Only Administrator can modify the API key.</p>' +
       '</div>';
   }
 
