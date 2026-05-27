@@ -12,7 +12,7 @@
   function isAdministrator() {
     try {
       var roles = frappe.user_roles || [];
-      return roles.indexOf('Administrator') !== -1;
+      return roles.indexOf('Administrator') !== -1 || roles.indexOf('System Manager') !== -1;
     } catch (e) { return false; }
   }
 
