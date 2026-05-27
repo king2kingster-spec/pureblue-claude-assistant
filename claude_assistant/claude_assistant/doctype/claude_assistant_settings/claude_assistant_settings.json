@@ -34,7 +34,7 @@
    "print": 0,
    "read": 1,
    "report": 0,
-   "role": "System Manager",
+   "role": "Administrator",
    "share": 0,
    "write": 1
   }
