@@ -5,16 +5,27 @@ import json
 
 @frappe.whitelist()
 def ask_claude(question, current_doctype=None, current_docname=None):
-	# Only System Manager can use this
 	if "System Manager" not in frappe.get_roles():
 		frappe.throw("Not permitted. Only System Manager can use Claude AI.")
 
-	# Get API key from settings
-	api_key = frappe.db.get_single_value("Claude Assistant Settings", "api_key")
-	if not api_key:
-		frappe.throw("Claude API key not configured. Please go to Claude Assistant Settings and save your API key.")
+	# Get API key - try single value first, then fallback to first record
+	api_key = None
+	try:
+		api_key = frappe.db.get_single_value("Claude Assistant Settings", "api_key")
+	except Exception:
+		pass
 
-	# Build context from ERPNext data
+	if not api_key:
+		try:
+			records = frappe.get_all("Claude Assistant Settings", fields=["name", "api_key"], limit=1)
+			if records:
+				api_key = records[0].get("api_key")
+		except Exception:
+			pass
+
+	if not api_key:
+		frappe.throw("Claude API key not configured. Please add it in Claude Assistant Settings.")
+
 	context = build_context(question, current_doctype, current_docname)
 
 	system_prompt = """You are an AI assistant embedded inside ERPNext for PureBlue, an Indian company that manufactures and sells Diesel Exhaust Fluid (DEF).
@@ -64,7 +75,6 @@ Current ERP Data:
 def build_context(question, current_doctype, current_docname):
 	parts = []
 
-	# Current open document
 	if current_doctype and current_docname:
 		try:
 			doc = frappe.get_doc(current_doctype, current_docname).as_dict()
@@ -79,18 +89,14 @@ def build_context(question, current_doctype, current_docname):
 
 	if any(w in q for w in ['customer', 'client', 'customers']):
 		try:
-			data = frappe.get_list("Customer",
-				fields=["name", "customer_name", "customer_group", "territory", "mobile_no"],
-				limit=20)
+			data = frappe.get_list("Customer", fields=["name", "customer_name", "customer_group", "territory", "mobile_no"], limit=20)
 			parts.append("CUSTOMERS:\n" + json.dumps(data, default=str))
 		except Exception:
 			pass
 
 	if any(w in q for w in ['supplier', 'vendor', 'suppliers']):
 		try:
-			data = frappe.get_list("Supplier",
-				fields=["name", "supplier_name", "supplier_group"],
-				limit=20)
+			data = frappe.get_list("Supplier", fields=["name", "supplier_name", "supplier_group"], limit=20)
 			parts.append("SUPPLIERS:\n" + json.dumps(data, default=str))
 		except Exception:
 			pass
@@ -99,9 +105,7 @@ def build_context(question, current_doctype, current_docname):
 		try:
 			data = frappe.get_list("Sales Invoice",
 				fields=["name", "customer", "posting_date", "grand_total", "outstanding_amount", "status"],
-				filters={"docstatus": 1},
-				order_by="posting_date desc",
-				limit=20)
+				filters={"docstatus": 1}, order_by="posting_date desc", limit=20)
 			parts.append("SALES INVOICES:\n" + json.dumps(data, default=str))
 		except Exception:
 			pass
@@ -110,20 +114,16 @@ def build_context(question, current_doctype, current_docname):
 		try:
 			data = frappe.get_list("Purchase Invoice",
 				fields=["name", "supplier", "posting_date", "grand_total", "outstanding_amount", "status"],
-				filters={"docstatus": 1},
-				order_by="posting_date desc",
-				limit=20)
+				filters={"docstatus": 1}, order_by="posting_date desc", limit=20)
 			parts.append("PURCHASE INVOICES:\n" + json.dumps(data, default=str))
 		except Exception:
 			pass
 
-	if any(w in q for w in ['order', 'sales order', 'so']):
+	if any(w in q for w in ['order', 'sales order']):
 		try:
 			data = frappe.get_list("Sales Order",
 				fields=["name", "customer", "transaction_date", "grand_total", "status"],
-				filters={"docstatus": 1},
-				order_by="transaction_date desc",
-				limit=20)
+				filters={"docstatus": 1}, order_by="transaction_date desc", limit=20)
 			parts.append("SALES ORDERS:\n" + json.dumps(data, default=str))
 		except Exception:
 			pass
@@ -132,9 +132,7 @@ def build_context(question, current_doctype, current_docname):
 		try:
 			data = frappe.get_list("Purchase Order",
 				fields=["name", "supplier", "transaction_date", "grand_total", "status"],
-				filters={"docstatus": 1},
-				order_by="transaction_date desc",
-				limit=20)
+				filters={"docstatus": 1}, order_by="transaction_date desc", limit=20)
 			parts.append("PURCHASE ORDERS:\n" + json.dumps(data, default=str))
 		except Exception:
 			pass
@@ -142,11 +140,9 @@ def build_context(question, current_doctype, current_docname):
 	if any(w in q for w in ['stock', 'inventory', 'item', 'def', 'quantity', 'warehouse']):
 		try:
 			data = frappe.db.sql("""
-				SELECT item_code, item_name, warehouse, actual_qty, reserved_qty, valuation_rate
-				FROM `tabBin`
-				WHERE actual_qty > 0
-				ORDER BY actual_qty DESC
-				LIMIT 30
+				SELECT item_code, item_name, warehouse, actual_qty, valuation_rate
+				FROM `tabBin` WHERE actual_qty > 0
+				ORDER BY actual_qty DESC LIMIT 30
 			""", as_dict=True)
 			parts.append("CURRENT STOCK:\n" + json.dumps(data, default=str))
 		except Exception:
@@ -155,10 +151,8 @@ def build_context(question, current_doctype, current_docname):
 	if any(w in q for w in ['payment', 'paid', 'receipt']):
 		try:
 			data = frappe.get_list("Payment Entry",
-				fields=["name", "payment_type", "party", "posting_date", "paid_amount", "mode_of_payment"],
-				filters={"docstatus": 1},
-				order_by="posting_date desc",
-				limit=20)
+				fields=["name", "payment_type", "party", "posting_date", "paid_amount"],
+				filters={"docstatus": 1}, order_by="posting_date desc", limit=20)
 			parts.append("PAYMENTS:\n" + json.dumps(data, default=str))
 		except Exception:
 			pass
@@ -168,11 +162,9 @@ def build_context(question, current_doctype, current_docname):
 			data = frappe.db.sql("""
 				SELECT DATE_FORMAT(posting_date, '%Y-%m') as month,
 					COUNT(*) as invoices, SUM(grand_total) as total_sales
-				FROM `tabSales Invoice`
-				WHERE docstatus = 1
+				FROM `tabSales Invoice` WHERE docstatus = 1
 				GROUP BY DATE_FORMAT(posting_date, '%Y-%m')
-				ORDER BY month DESC
-				LIMIT 6
+				ORDER BY month DESC LIMIT 6
 			""", as_dict=True)
 			parts.append("MONTHLY SALES:\n" + json.dumps(data, default=str))
 		except Exception:
@@ -182,19 +174,16 @@ def build_context(question, current_doctype, current_docname):
 		try:
 			data = frappe.get_list("Delivery Note",
 				fields=["name", "customer", "posting_date", "grand_total", "status"],
-				filters={"docstatus": 1},
-				order_by="posting_date desc",
-				limit=20)
+				filters={"docstatus": 1}, order_by="posting_date desc", limit=20)
 			parts.append("DELIVERY NOTES:\n" + json.dumps(data, default=str))
 		except Exception:
 			pass
 
-	# Default summary if no specific context
 	if not parts:
 		try:
 			c = frappe.db.count("Customer")
 			s = frappe.db.count("Supplier")
-			parts.append("COMPANY SUMMARY: {} customers, {} suppliers on PureBlue ERPNext.".format(c, s))
+			parts.append("COMPANY SUMMARY: {} customers, {} suppliers.".format(c, s))
 		except Exception:
 			pass
 
@@ -202,22 +191,27 @@ def build_context(question, current_doctype, current_docname):
 
 
 @frappe.whitelist()
-def save_api_key(api_key):
-	if "System Manager" not in frappe.get_roles():
-		frappe.throw("Only System Manager can save the API key.")
-	settings = frappe.get_single("Claude Assistant Settings")
-	settings.api_key = api_key
-	settings.save(ignore_permissions=True)
-	frappe.db.commit()
-	return "saved"
-
-
-@frappe.whitelist()
 def get_settings():
 	try:
 		if "System Manager" not in frappe.get_roles():
 			return {"has_key": False, "permitted": False}
-		key = frappe.db.get_single_value("Claude Assistant Settings", "api_key")
-		return {"has_key": bool(key), "permitted": True}
+
+		# Try single doctype first
+		api_key = None
+		try:
+			api_key = frappe.db.get_single_value("Claude Assistant Settings", "api_key")
+		except Exception:
+			pass
+
+		# Fallback to first record
+		if not api_key:
+			try:
+				records = frappe.get_all("Claude Assistant Settings", fields=["api_key"], limit=1)
+				if records:
+					api_key = records[0].get("api_key")
+			except Exception:
+				pass
+
+		return {"has_key": bool(api_key), "permitted": True}
 	except Exception:
 		return {"has_key": False, "permitted": True}
